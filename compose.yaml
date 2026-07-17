@@ -1,0 +1,64 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile     # ← on build notre image custom
+    container_name: Vite_et_Gourmand
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+    environment:
+      MYSQL_HOST: db
+      MYSQL_DATABASE: vite_et_gourmand
+      MYSQL_USER: farouk
+      MYSQL_PASSWORD: farouk
+      MONGO_URI: mongodb://farouk:farouk@mongo:27017/vite_et_gourmand?authSource=admin
+    restart: unless-stopped
+    depends_on:
+      - db
+      - mongo
+
+  db:
+    image: mysql:8.4
+    container_name: Vite_et_Gourmand-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: vite_et_gourmand
+      MYSQL_USER: farouk
+      MYSQL_PASSWORD: farouk
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./src/sql:/docker-entrypoint-initdb.d
+
+  mongo:
+    image: mongo:8
+    container_name: Vite_et_Gourmand-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: farouk
+      MONGO_INITDB_ROOT_PASSWORD: farouk
+      MONGO_INITDB_DATABASE: vite_et_gourmand
+    volumes:
+      - mongo_data:/data/db
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: Vite_et_Gourmand-phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+    depends_on:
+      - db
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  mongo_data:

@@ -1,0 +1,24 @@
+# ── Dépendances ─────────────────────────────────
+vendor/
+node_modules/
+
+# ── Variables d'environnement (JAMAIS committé) ─
+.env
+*.env
+
+# ── Uploads utilisateurs ────────────────────────
+src/public/uploads/menus/*
+!src/public/uploads/menus/.gitkeep
+
+# ── Fichiers systèmes ───────────────────────────
+.DS_Store
+Thumbs.db
+*.log
+
+# ── IDE ─────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+
+# ── Docker (données persistantes) ───────────────
+# Les volumes sont gérés par Docker, pas par Git
