@@ -1,0 +1,9 @@
+{
+    "name": "pharouqy/vite-et-gourmand",
+    "description": "Plateforme de commande en ligne — ECF Studi",
+    "type": "project",
+    "require": {
+        "mongodb/mongodb": "^2.3",
+        "phpmailer/phpmailer": "^7.1"
+    }
+}
