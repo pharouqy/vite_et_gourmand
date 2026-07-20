@@ -1,0 +1,10 @@
+# Activer le moteur de réécriture
+RewriteEngine On
+
+# Ne pas réécrire les fichiers et dossiers qui existent réellement
+# (CSS, JS, images dans assets/ et uploads/)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Tout le reste → index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
