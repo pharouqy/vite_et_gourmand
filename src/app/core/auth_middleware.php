@@ -50,3 +50,14 @@ function require_employe_ou_admin(): void
         redirect('/');
     }
 }
+
+/**
+ * Redirige vers l'espace de l'utilisateur s'il est déjà connecté.
+ * Utile sur les pages /connexion et /inscription.
+ */
+function redirect_si_connecte(): void
+{
+    if (est_connecte()) {
+        auth_rediriger_selon_role();
+    }
+}

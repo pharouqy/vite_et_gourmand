@@ -145,35 +145,121 @@ function auth_envoyer_mail_bienvenue(string $prenom, string $nom, string $email)
 }
 
 // ══════════════════════════════════════════════════════
-// CONNEXION (squelettes — implémentés en US-1.2)
+// CONNEXION
 // ══════════════════════════════════════════════════════
 
 function auth_connexion_form(): void
 {
+    // Si déjà connecté → rediriger vers l'espace correspondant
+    if (est_connecte()) {
+        auth_rediriger_selon_role();
+    }
+
     render('auth/connexion', ['titre_page' => 'Connexion']);
 }
 
 function auth_connexion_traiter(): void
 {
-    redirect('/connexion');
+    // ── 1. Vérification CSRF ─────────────────────────────────────────
+    csrf_verifier();
+
+    // ── 2. Récupération des champs ───────────────────────────────────
+    $email    = post_param('email', '');
+    $password = post_raw('password', '');
+    $redirect = post_param('redirect', '');
+
+    // ── 3. Validation minimale ───────────────────────────────────────
+    if (empty($email) || empty($password)) {
+        $_SESSION['flash'] = [
+            'type'    => 'danger',
+            'message' => 'Veuillez remplir tous les champs.',
+        ];
+        redirect('/connexion');
+    }
+
+    // ── 4. Recherche de l'utilisateur ────────────────────────────────
+    $utilisateur = utilisateur_par_email($email);
+
+    // ── 5. Vérification du mot de passe ─────────────────────────────
+    // On vérifie TOUJOURS le hash, même si l'email est introuvable.
+    // Sans ça, un attaquant mesure le temps de réponse pour savoir
+    // si l'email existe (timing attack).
+    $hash_factice = '$2y$12$fakehashpourprevenirtimingattackXXXXXXXXXXXXXXXXXXXXXX';
+    $hash_reel    = $utilisateur['password'] ?? $hash_factice;
+
+    $mdp_valide = password_verify($password, $hash_reel);
+
+    if (!$utilisateur || !$mdp_valide) {
+        // Message IDENTIQUE que ce soit l'email ou le mdp qui soit faux
+        $_SESSION['flash'] = [
+            'type'    => 'danger',
+            'message' => 'Identifiants incorrects.',
+        ];
+        redirect('/connexion');
+    }
+
+    // ── 6. Démarrage de session sécurisé ─────────────────────────────
+    // Régénère l'ID de session pour prévenir la session fixation
+    session_regenerate_id(true);
+
+    // ── 7. Stockage des données en session ───────────────────────────
+    $_SESSION['utilisateur_id'] = $utilisateur['utilisateur_id'];
+    $_SESSION['nom']            = $utilisateur['nom'];
+    $_SESSION['prenom']         = $utilisateur['prenom'];
+    $_SESSION['email']          = $utilisateur['email'];
+    $_SESSION['role_id']        = (int) $utilisateur['role_id'];
+
+    // ── 8. Redirection selon le contexte ─────────────────────────────
+    // Si l'utilisateur venait d'une page protégée, on l'y renvoie
+    if (!empty($redirect) && str_starts_with($redirect, '/')) {
+        redirect($redirect);
+    }
+
+    auth_rediriger_selon_role();
 }
+
+// ══════════════════════════════════════════════════════
+// DÉCONNEXION
+// ══════════════════════════════════════════════════════
+
 function auth_deconnexion(): void
 {
-    redirect('/');
+    // Vider toutes les variables de session
+    $_SESSION = [];
+
+    // Détruire le cookie de session côté navigateur
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params['path'],
+            $params['domain'],
+            $params['secure'],
+            $params['httponly']
+        );
+    }
+
+    // Détruire la session côté serveur
+    session_destroy();
+
+    redirect('/connexion');
 }
-function auth_oublie_form(): void
+
+// ══════════════════════════════════════════════════════
+// UTILITAIRE — Redirection selon le rôle
+// ══════════════════════════════════════════════════════
+
+function auth_rediriger_selon_role(): never
 {
-    redirect('/');
-}
-function auth_oublie_traiter(): void
-{
-    redirect('/');
-}
-function auth_reset_form(): void
-{
-    redirect('/');
-}
-function auth_reset_traiter(): void
-{
-    redirect('/');
+    $role = role_actuel();
+
+    $destinations = [
+        ROLE_ADMIN   => '/admin/statistiques',
+        ROLE_EMPLOYE => '/employe/commandes',
+        ROLE_CLIENT  => '/compte/commandes',
+    ];
+
+    redirect($destinations[$role] ?? '/');
 }

@@ -87,7 +87,7 @@
             <p>Traiteur événementiel haut de gamme</p>
         </div>
         <div class="body">
-            <h2>Bienvenue, <?= htmlspecialchars($prenom) ?> !</h2>
+            <h2>Bienvenue, <?= htmlspecialchars($prenom) . " " . htmlspecialchars($nom) ?> !</h2>
             <p>
                 Votre compte a bien été créé sur <strong>Vite & Gourmand</strong>.
                 Vous pouvez dès maintenant parcourir notre catalogue de menus
