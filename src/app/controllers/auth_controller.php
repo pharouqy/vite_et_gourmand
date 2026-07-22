@@ -263,3 +263,155 @@ function auth_rediriger_selon_role(): never
 
     redirect($destinations[$role] ?? '/');
 }
+
+// ══════════════════════════════════════════════════════
+// MOT DE PASSE OUBLIÉ
+// ══════════════════════════════════════════════════════
+
+function auth_oublie_form(): void
+{
+    render('auth/mot-de-passe-oublie', ['titre_page' => 'Mot de passe oublié']);
+}
+
+function auth_oublie_traiter(): void
+{
+    csrf_verifier();
+
+    $email = post_param('email', '');
+
+    // ⚠️ Réponse IDENTIQUE que l'email existe ou non (sécurité)
+    // On ne révèle jamais si un email est enregistré
+    $message_generique = [
+        'type'    => 'success',
+        'message' => 'Si cette adresse est associée à un compte, '
+                   . 'vous recevrez un email dans quelques instants.',
+    ];
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['flash'] = $message_generique;
+        redirect('/mot-de-passe-oublie');
+    }
+
+    $utilisateur = utilisateur_par_email($email);
+
+    if ($utilisateur) {
+        // Générer et stocker le token
+        $token = token_creer((int) $utilisateur['utilisateur_id']);
+
+        // Construire le lien de réinitialisation
+        $base_url   = getenv('APP_URL') ?: 'http://localhost:8080';
+        $lien_reset = $base_url . '/reinitialisation?token=' . $token;
+
+        // Envoyer le mail
+        auth_envoyer_mail_reset(
+            $utilisateur['prenom'],
+            $utilisateur['email'],
+            $lien_reset
+        );
+    }
+
+    // Même réponse dans tous les cas
+    $_SESSION['flash'] = $message_generique;
+    redirect('/mot-de-passe-oublie');
+}
+
+function auth_reset_form(): void
+{
+    $token = get_param('token', '');
+
+    // Vérifier que le token est valide AVANT d'afficher le formulaire
+    if (empty($token) || !token_trouver_valide($token)) {
+        $_SESSION['flash'] = [
+            'type'    => 'danger',
+            'message' => 'Ce lien de réinitialisation est invalide ou a expiré. '
+                       . 'Veuillez faire une nouvelle demande.',
+        ];
+        redirect('/mot-de-passe-oublie');
+    }
+
+    render('auth/reinitialisation', ['titre_page' => 'Réinitialisation']);
+}
+
+function auth_reset_traiter(): void
+{
+    csrf_verifier();
+
+    $token            = post_param('token', '');
+    $password         = post_raw('password', '');
+    $password_confirm = post_raw('password_confirm', '');
+
+    // ── 1. Vérifier le token ─────────────────────────────────────────
+    $token_data = token_trouver_valide($token);
+
+    if (!$token_data) {
+        $_SESSION['flash'] = [
+            'type'    => 'danger',
+            'message' => 'Ce lien a expiré ou a déjà été utilisé. '
+                       . 'Veuillez faire une nouvelle demande.',
+        ];
+        redirect('/mot-de-passe-oublie');
+    }
+
+    // ── 2. Valider le nouveau mot de passe ───────────────────────────
+    $regex_mdp = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{10,}$/';
+
+    if (!preg_match($regex_mdp, $password)) {
+        $_SESSION['flash'] = [
+            'type'    => 'danger',
+            'message' => 'Le mot de passe ne respecte pas les critères de sécurité.',
+        ];
+        redirect('/reinitialisation?token=' . urlencode($token));
+    }
+
+    if ($password !== $password_confirm) {
+        $_SESSION['flash'] = [
+            'type'    => 'danger',
+            'message' => 'Les deux mots de passe ne correspondent pas.',
+        ];
+        redirect('/reinitialisation?token=' . urlencode($token));
+    }
+
+    // ── 3. Mettre à jour le mot de passe ────────────────────────────
+    $hash = password_hash($password, PASSWORD_BCRYPT);
+    utilisateur_maj_password((int) $token_data['utilisateur_id'], $hash);
+
+    // ── 4. Invalider le token (usage unique) ─────────────────────────
+    token_invalider($token);
+
+    // ── 5. Flash et redirection ──────────────────────────────────────
+    $_SESSION['flash'] = [
+        'type'    => 'success',
+        'message' => 'Votre mot de passe a été réinitialisé. '
+                   . 'Vous pouvez maintenant vous connecter.',
+    ];
+    redirect('/connexion');
+}
+
+/**
+ * Envoie le mail de réinitialisation.
+ */
+function auth_envoyer_mail_reset(
+    string $prenom,
+    string $email,
+    string $lien_reset
+): void {
+    try {
+        $mail = creer_mailer();
+        $mail->addAddress($email, $prenom);
+        $mail->isHTML(true);
+        $mail->Subject = 'Réinitialisation de votre mot de passe — Vite & Gourmand';
+
+        ob_start();
+        require dirname(__DIR__) . '/mail_templates/reinitialisation_mdp.php';
+        $mail->Body = ob_get_clean();
+
+        $mail->AltBody = "Bonjour {$prenom},\n\n"
+                       . "Lien de réinitialisation (valable 1h) :\n{$lien_reset}\n\n"
+                       . "Si vous n'avez pas fait cette demande, ignorez ce mail.";
+
+        $mail->send();
+
+    } catch (Exception $e) {
+        error_log('[Mail reset] Échec : ' . $e->getMessage());
+    }
+}

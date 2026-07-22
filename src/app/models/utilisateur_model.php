@@ -68,3 +68,13 @@ function utilisateur_par_id(int $id): ?array
     $result = $stmt->fetch();
     return $result ?: null;
 }
+
+/**
+ * Met à jour le mot de passe d'un utilisateur.
+ */
+function utilisateur_maj_password(int $utilisateur_id, string $hash): void
+{
+    $pdo = getPDO();
+    $pdo->prepare('UPDATE utilisateur SET password = ? WHERE utilisateur_id = ?')
+        ->execute([$hash, $utilisateur_id]);
+}

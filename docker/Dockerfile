@@ -29,3 +29,10 @@ RUN a2enmod rewrite headers
 
 # ── 5. Document root ─────────────────────────────────────────────────────────
 WORKDIR /var/www/html
+
+# ── 6. Dépendances PHP ───────────────────────────────────────────────────────
+# Copie uniquement les fichiers Composer en premier (cache Docker optimisé)
+COPY src/composer.json src/composer.lock ./
+
+# Installe les dépendances (sans les packages dev en prod)
+RUN composer install --no-dev --optimize-autoloader
