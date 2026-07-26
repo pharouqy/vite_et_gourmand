@@ -14,5 +14,5 @@ function home_mentions_legales(): void
 
 function home_cgv(): void
 {
-    render('public/cgv', ['titre_page' => 'CGV']);
+    render('public/cgv', ['titre_page' => 'Conditions Générales de Vente']);
 }
