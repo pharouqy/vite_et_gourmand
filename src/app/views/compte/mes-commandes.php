@@ -7,4 +7,5 @@
     </p>
     <a href="/deconnexion" class="btn btn-outline mt-3">Se déconnecter</a>
 </main>
+
 <?php require dirname(__DIR__) . '/partials/footer.php'; ?>

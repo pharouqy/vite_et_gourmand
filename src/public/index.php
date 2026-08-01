@@ -48,6 +48,7 @@ require_once dirname(__DIR__) . '/app/controllers/api_controller.php';
 // ── Chargement des modèles ───────────────────────────────────────────
 require_once dirname(__DIR__) . '/app/models/utilisateur_model.php';
 require_once dirname(__DIR__) . '/app/models/token_reset_model.php';
+require_once dirname(__DIR__) . '/app/models/horaire_model.php';
 
 // ── Démarrage sécurisé de la session ────────────────────────────────
 require_once dirname(__DIR__) . '/app/core/router.php';

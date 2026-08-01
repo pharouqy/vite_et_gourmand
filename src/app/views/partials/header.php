@@ -23,10 +23,13 @@
 
     <!-- Charte graphique -->
     <link href="/assets/css/style.css" rel="stylesheet">
+    <link href="/assets/css/responsive.css" rel="stylesheet">
 </head>
 
 <body>
-
+    <a class="skip-link" href="#contenu-principal">
+        Aller au contenu principal
+    </a>
     <!-- ── Navigation ─────────────────────────────────────────────────── -->
     <nav class="navbar navbar-expand-lg">
         <div class="container">
@@ -83,3 +86,5 @@
     <?php require_once dirname(__DIR__) . '/partials/alertes.php'; ?>
 
     <!-- ── Contenu principal ─────────────────────────────────────────── -->
+
+    <main id="contenu-principal"></main>
