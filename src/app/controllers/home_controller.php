@@ -4,7 +4,11 @@ declare(strict_types=1);
 
 function home_index(): void
 {
-    render('public/accueil', ['titre_page' => 'Accueil']);
+    $avis = avis_publies(6);
+    render('public/accueil', [
+        'titre_page' => 'Accueil',
+        'avis'       => $avis,
+    ]);
 }
 
 function home_mentions_legales(): void

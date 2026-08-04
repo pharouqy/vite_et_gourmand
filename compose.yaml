@@ -62,3 +62,7 @@ services:
 volumes:
   mysql_data:
   mongo_data:
+
+networks:
+  default:
+    name: vite_et_gourmand_network
