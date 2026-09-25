@@ -35,7 +35,7 @@ function contact_envoyer(): void
     if (!empty($erreurs)) {
         $_SESSION['flash'] = [
             'type'    => 'danger',
-            'message' => implode('<br>', $erreurs),
+            'message' => implode(' \ ', $erreurs),
         ];
         redirect('/contact');
     }
