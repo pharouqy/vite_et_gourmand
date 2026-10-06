@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ── Génère le HTML d'une carte menu ─────────────────────────────
   function carteMenu(menu) {
     const prix =
-      parseFloat(menu.prix_par_personne).toLocaleString("fr-FR") + " DA";
+      parseFloat(menu.prix_par_personne).toLocaleString("fr-FR") + " €";
     const regime = menu.regime
       ? `<span class="badge badge-regime">${echapper(menu.regime)}</span>`
       : "";

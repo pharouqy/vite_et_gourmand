@@ -135,7 +135,7 @@ require dirname(__DIR__) . '/partials/header.php';
                         </h3>
                         <p class="text-muted mb-0">
                             Bordeaux et agglomération.<br>
-                            Livraison hors zone : forfait + 0,59 DA/km.
+                            Livraison hors zone : forfait + 0,59 €/km.
                         </p>
                     </div>
 

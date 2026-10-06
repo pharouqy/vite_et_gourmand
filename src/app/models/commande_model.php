@@ -111,7 +111,7 @@ function commande_par_numero(string $numero): ?array
 
 /**
  * Calcule les frais de livraison.
- * 0 DA si ville = Bordeaux, sinon forfait + km.
+ * 0 € si ville = Bordeaux, sinon forfait + km.
  * Pour simplifier : on se base sur la ville saisie.
  */
 function calculer_frais_livraison(string $ville): float

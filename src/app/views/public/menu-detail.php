@@ -129,8 +129,8 @@ require dirname(__DIR__) . '/partials/header.php';
                     </li>
                     <li>
                         Livraison incluse dans Bordeaux.
-                        Hors Bordeaux : forfait 5 DA +
-                        0,59 DA/km supplémentaire.
+                        Hors Bordeaux : forfait 5 € +
+                        0,59 €/km supplémentaire.
                     </li>
                     <?php if ($menu['regime']): ?>
                         <li>

@@ -65,7 +65,7 @@ function formatPrix(montant) {
     new Intl.NumberFormat("fr-FR", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(montant) + " DA"
+    }).format(montant) + " €"
   );
 }
 

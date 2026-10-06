@@ -21,7 +21,7 @@ require dirname(__DIR__) . '/partials/header.php';
             <!-- Prix maximum -->
             <div class="col-sm-6 col-lg-4">
                 <div class="filtre-group">
-                    <label for="prix_max">Prix max / personne (DA)</label>
+                    <label for="prix_max">Prix max / personne (€)</label>
                     <input type="number"
                            id="prix_max"
                            name="prix_max"
@@ -34,7 +34,7 @@ require dirname(__DIR__) . '/partials/header.php';
             <!-- Fourchette prix minimum -->
             <div class="col-sm-6 col-lg-4">
                 <div class="filtre-group">
-                    <label for="prix_min">Prix min / personne (DA)</label>
+                    <label for="prix_min">Prix min / personne (€)</label>
                     <input type="number"
                            id="prix_min"
                            name="prix_min"

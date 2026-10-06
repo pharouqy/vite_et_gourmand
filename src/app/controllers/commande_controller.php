@@ -29,10 +29,10 @@ function commande_prestation_traiter(): void
     require_role(ROLE_CLIENT);
     csrf_verifier();
 
-    $adresse  = post_param('adresse_livraison', '');
-    $ville    = post_param('ville_livraison', '');
-    $date     = post_param('date_prestation', '');
-    $heure    = post_param('heure_livraison', '');
+    $adresse = post_param('adresse_livraison', '');
+    $ville = post_param('ville_livraison', '');
+    $date = post_param('date_prestation', '');
+    $heure = post_param('heure_livraison', '');
 
     // ── Validation ────────────────────────────────────────────────
     $erreurs = [];
@@ -52,7 +52,7 @@ function commande_prestation_traiter(): void
 
     if (!empty($erreurs)) {
         $_SESSION['flash'] = [
-            'type'    => 'danger',
+            'type' => 'danger',
             'message' => implode('<br>', $erreurs),
         ];
         redirect('/commande/prestation');
@@ -66,10 +66,10 @@ function commande_prestation_traiter(): void
         $_SESSION['commande'] ?? [],
         [
             'adresse_livraison' => $adresse,
-            'ville_livraison'   => $ville,
-            'date_prestation'   => $date,
-            'heure_livraison'   => $heure,
-            'prix_livraison'    => $frais_livraison,
+            'ville_livraison' => $ville,
+            'date_prestation' => $date,
+            'heure_livraison' => $heure,
+            'prix_livraison' => $frais_livraison,
         ]
     );
 
@@ -90,13 +90,13 @@ function commande_menu_form(): void
         redirect('/commande/prestation');
     }
 
-    $menus   = menus_liste();
+    $menus = menus_liste();
     $menu_id = (int) ($_SESSION['commande']['menu_id'] ?? 0);
 
     render('commande/choix-menu', [
         'titre_page' => 'Commander — Étape 2',
-        'menus'      => $menus,
-        'menu_id'    => $menu_id,
+        'menus' => $menus,
+        'menu_id' => $menu_id,
     ]);
 }
 
@@ -106,12 +106,12 @@ function commande_menu_traiter(): void
     require_role(ROLE_CLIENT);
     csrf_verifier();
 
-    $menu_id      = (int) post_param('menu_id', 0);
+    $menu_id = (int) post_param('menu_id', 0);
     $nb_personnes = (int) post_param('nombre_personne', 0);
 
     if (!$menu_id) {
         $_SESSION['flash'] = [
-            'type'    => 'danger',
+            'type' => 'danger',
             'message' => 'Veuillez sélectionner un menu.',
         ];
         redirect('/commande/menu');
@@ -124,34 +124,34 @@ function commande_menu_traiter(): void
     }
 
     // Vérification du nombre minimum
-    if ($nb_personnes < (int)$menu['nombre_personne_minimum']) {
+    if ($nb_personnes < (int) $menu['nombre_personne_minimum']) {
         $_SESSION['flash'] = [
-            'type'    => 'danger',
+            'type' => 'danger',
             'message' => 'Le nombre minimum de personnes pour ce menu est '
-                       . $menu['nombre_personne_minimum'] . '.',
+                . $menu['nombre_personne_minimum'] . '.',
         ];
         redirect('/commande/menu');
     }
 
     // Calcul du prix avec remise éventuelle
     $prix = calculer_prix_menu(
-        (float)$menu['prix_par_personne'],
+        (float) $menu['prix_par_personne'],
         $nb_personnes,
-        (int)$menu['nombre_personne_minimum']
+        (int) $menu['nombre_personne_minimum']
     );
 
     $_SESSION['commande'] = array_merge(
         $_SESSION['commande'] ?? [],
         [
-            'menu_id'          => $menu_id,
-            'menu_titre'       => $menu['titre'],
-            'nombre_personne'  => $nb_personnes,
-            'prix_par_personne'=> (float)$menu['prix_par_personne'],
-            'prix_menu'        => $prix['prix_net'],
-            'prix_brut'        => $prix['prix_brut'],
+            'menu_id' => $menu_id,
+            'menu_titre' => $menu['titre'],
+            'nombre_personne' => $nb_personnes,
+            'prix_par_personne' => (float) $menu['prix_par_personne'],
+            'prix_menu' => $prix['prix_net'],
+            'prix_brut' => $prix['prix_brut'],
             'remise_appliquee' => $prix['remise_appliquee'],
-            'montant_remise'   => $prix['montant_remise'],
-            'taux_remise'      => $prix['taux_remise'],
+            'montant_remise' => $prix['montant_remise'],
+            'taux_remise' => $prix['taux_remise'],
         ]
     );
 
@@ -173,7 +173,7 @@ function commande_recap(): void
 
     render('commande/recapitulatif', [
         'titre_page' => 'Commander — Étape 3',
-        'commande'   => $_SESSION['commande'],
+        'commande' => $_SESSION['commande'],
     ]);
 }
 
@@ -189,28 +189,82 @@ function commande_confirmer(): void
 
     $c = $_SESSION['commande'];
 
-    // Insérer la commande en base
+    // ── Insertion en base ─────────────────────────────────────────
     $numero = commande_creer([
         'date_prestation' => $c['date_prestation'],
         'heure_livraison' => $c['heure_livraison'],
-        'prix_menu'       => $c['prix_menu'],
+        'prix_menu' => $c['prix_menu'],
         'nombre_personne' => $c['nombre_personne'],
-        'prix_livraison'  => $c['prix_livraison'],
-        'menu_id'         => $c['menu_id'],
-        'utilisateur_id'  => $_SESSION['utilisateur_id'],
+        'prix_livraison' => $c['prix_livraison'],
+        'menu_id' => $c['menu_id'],
+        'utilisateur_id' => $_SESSION['utilisateur_id'],
     ]);
 
-    // Vider la session de commande
+    // ── Envoi du mail de confirmation ─────────────────────────────
+    commande_envoyer_mail_confirmation($numero, $c);
+
+    // ── Nettoyage session ─────────────────────────────────────────
     unset($_SESSION['commande']);
 
-    // Mail de confirmation (US-3.3)
-    // TODO : implémenter en US-3.3
-
     $_SESSION['flash'] = [
-        'type'    => 'success',
+        'type' => 'success',
         'message' => "Commande {$numero} confirmée ! "
-                   . "Vous recevrez un email de confirmation.",
+            . "Un email de confirmation vous a été envoyé.",
     ];
 
     redirect('/compte/commandes');
+}
+
+/**
+ * Envoie le mail de confirmation de commande.
+ */
+function commande_envoyer_mail_confirmation(
+    string $numero,
+    array $c
+): void {
+    try {
+        $utilisateur = utilisateur_par_id(
+            (int) $_SESSION['utilisateur_id']
+        );
+
+        $mail = creer_mailer();
+        $mail->addAddress(
+            $utilisateur['email'],
+            $utilisateur['prenom'] . ' ' . $utilisateur['nom']
+        );
+        $mail->isHTML(true);
+        $mail->Subject = "Confirmation commande {$numero} — Vite & Gourmand";
+
+        // Variables pour le template
+        $prenom = $utilisateur['prenom'];
+        $date_prestation = $c['date_prestation'];
+        $heure = $c['heure_livraison'];
+        $adresse = $c['adresse_livraison'];
+        $ville = $c['ville_livraison'];
+        $menu_titre = $c['menu_titre'];
+        $nb_personnes = $c['nombre_personne'];
+        $prix_menu = prix_format((float) $c['prix_menu']);
+        $prix_livraison = prix_format((float) $c['prix_livraison']);
+        $total = prix_format(
+            (float) $c['prix_menu'] + (float) $c['prix_livraison']
+        );
+        $remise_appliquee = $c['remise_appliquee'] ?? false;
+        $montant_remise = prix_format((float) ($c['montant_remise'] ?? 0));
+
+        ob_start();
+        require dirname(__DIR__) . '/mail_templates/confirmation_commande.php';
+        $mail->Body = ob_get_clean();
+
+        $mail->AltBody =
+            "Bonjour {$prenom},\n\n"
+            . "Votre commande {$numero} est confirmée.\n"
+            . "Menu : {$menu_titre}\n"
+            . "Date : " . date('d/m/Y', strtotime($date_prestation)) . "\n"
+            . "Total : {$total}";
+
+        $mail->send();
+
+    } catch (Exception $e) {
+        error_log('[Mail confirmation commande] Échec : ' . $e->getMessage());
+    }
 }

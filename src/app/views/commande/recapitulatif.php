@@ -145,7 +145,7 @@ require dirname(__DIR__) . '/partials/header.php';
                             conditions générales de vente
                         </a>,
                         notamment les règles de retour de matériel
-                        (pénalité de 600 DA après 10 jours ouvrés).
+                        (pénalité de 600 € après 10 jours ouvrés).
                     </div>
 
                     <!-- Boutons -->

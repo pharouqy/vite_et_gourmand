@@ -32,12 +32,12 @@ function role_actuel(): ?int
 }
 
 /**
- * Formate un prix en euros (contexte algérien → DZD si besoin).
- * Exemple : prix_format(2500.00) → "2 500,00 DA"
+ * Formate un prix en euros.
+ * Exemple : prix_format(2500.00) → "2 500,00 €"
  */
 function prix_format(float $montant): string
 {
-    return number_format($montant, 2, ',', ' ') . ' DA';
+    return number_format($montant, 2, ',', ' ') . ' €';
 }
 
 /**
