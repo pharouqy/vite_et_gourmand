@@ -7,7 +7,7 @@ declare(strict_types=1);
  */
 function utilisateur_email_existe(string $email): bool
 {
-    $pdo  = getPDO();
+    $pdo = getPDO();
     $stmt = $pdo->prepare('SELECT COUNT(*) FROM utilisateur WHERE email = ?');
     $stmt->execute([$email]);
     return (int) $stmt->fetchColumn() > 0;
@@ -19,7 +19,7 @@ function utilisateur_email_existe(string $email): bool
  */
 function utilisateur_creer(array $donnees): int
 {
-    $pdo  = getPDO();
+    $pdo = getPDO();
     $stmt = $pdo->prepare("
         INSERT INTO utilisateur
             (nom, prenom, email, password, telephone,
@@ -30,15 +30,15 @@ function utilisateur_creer(array $donnees): int
     ");
 
     $stmt->execute([
-        ':nom'             => $donnees['nom'],
-        ':prenom'          => $donnees['prenom'],
-        ':email'           => $donnees['email'],
-        ':password'        => $donnees['password'], // déjà hashé
-        ':telephone'       => $donnees['telephone'],
+        ':nom' => $donnees['nom'],
+        ':prenom' => $donnees['prenom'],
+        ':email' => $donnees['email'],
+        ':password' => $donnees['password'], // déjà hashé
+        ':telephone' => $donnees['telephone'],
         ':adresse_postale' => $donnees['adresse_postale'],
-        ':ville'           => $donnees['ville'],
-        ':pays'            => $donnees['pays'],
-        ':role_id'         => ROLE_CLIENT,           // toujours Client à l'inscription
+        ':ville' => $donnees['ville'],
+        ':pays' => $donnees['pays'],
+        ':role_id' => ROLE_CLIENT,           // toujours Client à l'inscription
     ]);
 
     return (int) $pdo->lastInsertId();
@@ -50,7 +50,7 @@ function utilisateur_creer(array $donnees): int
  */
 function utilisateur_par_email(string $email): ?array
 {
-    $pdo  = getPDO();
+    $pdo = getPDO();
     $stmt = $pdo->prepare('SELECT * FROM utilisateur WHERE email = ? AND actif = 1');
     $stmt->execute([$email]);
     $result = $stmt->fetch();
@@ -62,7 +62,7 @@ function utilisateur_par_email(string $email): ?array
  */
 function utilisateur_par_id(int $id): ?array
 {
-    $pdo  = getPDO();
+    $pdo = getPDO();
     $stmt = $pdo->prepare('SELECT * FROM utilisateur WHERE utilisateur_id = ?');
     $stmt->execute([$id]);
     $result = $stmt->fetch();
@@ -77,4 +77,25 @@ function utilisateur_maj_password(int $utilisateur_id, string $hash): void
     $pdo = getPDO();
     $pdo->prepare('UPDATE utilisateur SET password = ? WHERE utilisateur_id = ?')
         ->execute([$hash, $utilisateur_id]);
+}
+
+/**
+ * Met à jour le profil d'un utilisateur.
+ */
+function utilisateur_modifier_profil(int $id, array $d): void
+{
+    getPDO()->prepare("
+        UPDATE utilisateur
+        SET nom=?, prenom=?, telephone=?,
+            adresse_postale=?, ville=?, pays=?
+        WHERE utilisateur_id=?
+    ")->execute([
+                $d['nom'],
+                $d['prenom'],
+                $d['telephone'],
+                $d['adresse_postale'],
+                $d['ville'],
+                $d['pays'],
+                $id,
+            ]);
 }

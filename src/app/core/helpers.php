@@ -48,3 +48,21 @@ function date_fr(string $date): string
 {
     return date('d/m/Y', strtotime($date));
 }
+
+/**
+ * Retourne la classe CSS Bootstrap correspondant au statut.
+ */
+function badge_statut(string $statut): array
+{
+    return match ($statut) {
+        STATUT_EN_ATTENTE => ['classe' => 'badge-en-attente'],
+        STATUT_ACCEPTE => ['classe' => 'badge-accepte'],
+        STATUT_PREPARATION => ['classe' => 'badge-en-preparation'],
+        STATUT_LIVRAISON => ['classe' => 'badge-en-livraison'],
+        STATUT_LIVRE => ['classe' => 'badge-livre'],
+        STATUT_MATERIEL => ['classe' => 'badge-materiel'],
+        STATUT_TERMINEE => ['classe' => 'badge-terminee'],
+        STATUT_ANNULEE => ['classe' => 'badge-annulee'],
+        default => ['classe' => 'badge-secondary'],
+    };
+}

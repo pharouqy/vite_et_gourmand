@@ -12,7 +12,9 @@ function commande_creer(array $donnees): string
 
     // Génère un numéro unique : CMD-YYYY-XXXX
     $numero = 'CMD-' . date('Y') . '-' . strtoupper(substr(
-        bin2hex(random_bytes(4)), 0, 6
+        bin2hex(random_bytes(4)),
+        0,
+        6
     ));
 
     $stmt = $pdo->prepare("
@@ -30,14 +32,14 @@ function commande_creer(array $donnees): string
     ");
 
     $stmt->execute([
-        ':numero'           => $numero,
-        ':date_prestation'  => $donnees['date_prestation'],
-        ':heure_livraison'  => $donnees['heure_livraison'],
-        ':prix_menu'        => $donnees['prix_menu'],
-        ':nombre_personne'  => $donnees['nombre_personne'],
-        ':prix_livraison'   => $donnees['prix_livraison'],
-        ':menu_id'          => $donnees['menu_id'],
-        ':utilisateur_id'   => $donnees['utilisateur_id'],
+        ':numero' => $numero,
+        ':date_prestation' => $donnees['date_prestation'],
+        ':heure_livraison' => $donnees['heure_livraison'],
+        ':prix_menu' => $donnees['prix_menu'],
+        ':nombre_personne' => $donnees['nombre_personne'],
+        ':prix_livraison' => $donnees['prix_livraison'],
+        ':menu_id' => $donnees['menu_id'],
+        ':utilisateur_id' => $donnees['utilisateur_id'],
     ]);
 
     // Insérer le premier statut dans l'historique
@@ -67,7 +69,7 @@ function historique_statut_ajouter(
  */
 function commandes_par_utilisateur(int $utilisateur_id): array
 {
-    $pdo  = getPDO();
+    $pdo = getPDO();
     $stmt = $pdo->prepare("
         SELECT c.*, m.titre AS menu_titre
         FROM commande c
@@ -84,7 +86,7 @@ function commandes_par_utilisateur(int $utilisateur_id): array
  */
 function commande_par_numero(string $numero): ?array
 {
-    $pdo  = getPDO();
+    $pdo = getPDO();
     $stmt = $pdo->prepare("
         SELECT c.*, m.titre AS menu_titre,
                m.nombre_personne_minimum,
@@ -95,7 +97,8 @@ function commande_par_numero(string $numero): ?array
     ");
     $stmt->execute([$numero]);
     $commande = $stmt->fetch();
-    if (!$commande) return null;
+    if (!$commande)
+        return null;
 
     // Historique des statuts
     $stmt2 = $pdo->prepare("
@@ -133,27 +136,58 @@ function calculer_frais_livraison(string $ville): float
  */
 function calculer_prix_menu(
     float $prix_par_personne,
-    int   $nb_personnes,
-    int   $nb_minimum
+    int $nb_personnes,
+    int $nb_minimum
 ): array {
     $remise_appliquee = false;
-    $taux_remise      = 0.0;
+    $taux_remise = 0.0;
 
     // Remise 10% si nb_personnes >= minimum + 5
     if ($nb_personnes >= ($nb_minimum + REMISE_SEUIL_PERSONNES)) {
         $remise_appliquee = true;
-        $taux_remise      = REMISE_TAUX;
+        $taux_remise = REMISE_TAUX;
     }
 
-    $prix_brut   = $prix_par_personne * $nb_personnes;
+    $prix_brut = $prix_par_personne * $nb_personnes;
     $montant_remise = $remise_appliquee ? $prix_brut * $taux_remise : 0;
-    $prix_net    = $prix_brut - $montant_remise;
+    $prix_net = $prix_brut - $montant_remise;
 
     return [
-        'prix_brut'        => $prix_brut,
+        'prix_brut' => $prix_brut,
         'remise_appliquee' => $remise_appliquee,
-        'montant_remise'   => $montant_remise,
-        'prix_net'         => $prix_net,
-        'taux_remise'      => $taux_remise * 100,
+        'montant_remise' => $montant_remise,
+        'prix_net' => $prix_net,
+        'taux_remise' => $taux_remise * 100,
     ];
+}
+
+/**
+ * Change le statut d'une commande et insère dans l'historique.
+ */
+function commande_changer_statut(
+    string $numero,
+    string $statut,
+    ?string $commentaire = null
+): void {
+    $pdo = getPDO();
+    $pdo->prepare("
+        UPDATE commande SET statut = ? WHERE numero_commande = ?
+    ")->execute([$statut, $numero]);
+
+    historique_statut_ajouter($numero, $statut, $commentaire);
+}
+
+/**
+ * Modifie la date et l'heure d'une commande.
+ */
+function commande_modifier_dates(
+    string $numero,
+    string $date,
+    string $heure
+): void {
+    getPDO()->prepare("
+        UPDATE commande
+        SET date_prestation = ?, heure_livraison = ?
+        WHERE numero_commande = ?
+    ")->execute([$date, $heure, $numero]);
 }
