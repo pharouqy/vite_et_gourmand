@@ -191,3 +191,148 @@ function commande_modifier_dates(
         WHERE numero_commande = ?
     ")->execute([$date, $heure, $numero]);
 }
+
+/**
+ * Liste des commandes pour l'espace employé, avec filtres optionnels.
+ * $filtres['statut'] : un statut exact (ou vide = tous)
+ * $filtres['client'] : texte recherché dans nom, prénom ou email
+ */
+function commandes_filtrees(array $filtres = []): array
+{
+    $where = ['1=1'];
+    $params = [];
+
+    if (!empty($filtres['statut'])) {
+        $where[] = 'c.statut = :statut';
+        $params[':statut'] = $filtres['statut'];
+    }
+
+    if (!empty($filtres['client'])) {
+        $where[] = '(u.nom LIKE :client_nom
+                                OR u.prenom LIKE :client_prenom
+                                OR u.email LIKE :client_email)';
+        $motif = '%' . $filtres['client'] . '%';
+        $params[':client_nom'] = $motif;
+        $params[':client_prenom'] = $motif;
+        $params[':client_email'] = $motif;
+    }
+
+    $sql = "
+        SELECT
+            c.numero_commande,
+            c.date_commande,
+            c.date_prestation,
+            c.heure_livraison,
+            c.prix_menu,
+            c.prix_livraison,
+            c.nombre_personne,
+            c.statut,
+            m.titre  AS menu_titre,
+            u.nom    AS client_nom,
+            u.prenom AS client_prenom,
+            u.email  AS client_email
+        FROM commande c
+        JOIN menu        m ON m.menu_id        = c.menu_id
+        JOIN utilisateur u ON u.utilisateur_id = c.utilisateur_id
+        WHERE " . implode(' AND ', $where) . "
+        ORDER BY c.date_commande DESC
+    ";
+
+    $stmt = getPDO()->prepare($sql);
+    $stmt->execute($params);
+    return $stmt->fetchAll();
+}
+
+/**
+ * Détail d'une commande pour l'employé : commande + client + historique.
+ * Contrairement à commande_par_numero(), on joint ici les coordonnées
+ * du client (l'employé doit pouvoir l'appeler ou lui écrire).
+ */
+function commande_detail_employe(string $numero): ?array
+{
+    $pdo = getPDO();
+    $stmt = $pdo->prepare("
+        SELECT
+            c.*,
+            m.titre  AS menu_titre,
+            u.nom    AS client_nom,
+            u.prenom AS client_prenom,
+            u.email  AS client_email,
+            u.telephone AS client_telephone
+        FROM commande c
+        JOIN menu        m ON m.menu_id        = c.menu_id
+        JOIN utilisateur u ON u.utilisateur_id = c.utilisateur_id
+        WHERE c.numero_commande = ?
+    ");
+    $stmt->execute([$numero]);
+    $commande = $stmt->fetch();
+
+    if (!$commande) {
+        return null;
+    }
+
+    $stmt2 = $pdo->prepare("
+        SELECT * FROM historique_statut_commande
+        WHERE numero_commande = ?
+        ORDER BY created_at ASC
+    ");
+    $stmt2->execute([$numero]);
+    $commande['historique'] = $stmt2->fetchAll();
+
+    return $commande;
+}
+
+/**
+ * Annulation par un employé : statut + mode de contact + motif,
+ * puis ligne d'historique. Le tout dans une transaction :
+ * soit les deux écritures réussissent, soit aucune.
+ */
+function commande_annuler_employe(
+    string $numero,
+    string $mode_contact,
+    string $motif
+): void {
+    $pdo = getPDO();
+    $pdo->beginTransaction();
+
+    try {
+        $pdo->prepare("
+            UPDATE commande
+            SET statut                  = ?,
+                mode_contact_annulation = ?,
+                motif_annulation        = ?
+            WHERE numero_commande = ?
+        ")->execute([STATUT_ANNULEE, $mode_contact, $motif, $numero]);
+
+        historique_statut_ajouter(
+            $numero,
+            STATUT_ANNULEE,
+            "Annulée par l'équipe — client contacté par {$mode_contact}."
+        );
+
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
+ * Indique si du matériel est prêté pour cette commande.
+ */
+function commande_maj_materiel(string $numero, int $pret): void
+{
+    getPDO()->prepare("
+        UPDATE commande SET pret_materiel = ? WHERE numero_commande = ?
+    ")->execute([$pret, $numero]);
+}
+
+/**
+ * Marque le matériel comme restitué.
+ */
+function commande_marquer_restitution(string $numero): void
+{
+    getPDO()->prepare("
+        UPDATE commande SET restitution_materiel = 1 WHERE numero_commande = ?
+    ")->execute([$numero]);
+}
