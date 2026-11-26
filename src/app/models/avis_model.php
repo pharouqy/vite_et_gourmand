@@ -55,3 +55,52 @@ function avis_par_commande(string $commande_id): ?int
     $result = $stmt->fetchColumn();
     return $result ? (int) $result : null;
 }
+
+/**
+ * Avis en attente de modération, du plus ancien au plus récent.
+ * On joint le client et le menu : l'employé doit savoir de quelle
+ * prestation parle l'avis avant de le publier.
+ */
+function avis_a_moderer(): array
+{
+    $stmt = getPDO()->query("
+        SELECT
+            a.avis_id,
+            a.note,
+            a.description,
+            a.commande_id,
+            u.prenom,
+            u.nom,
+            m.titre AS menu_titre
+        FROM avis a
+        JOIN utilisateur u ON u.utilisateur_id   = a.utilisateur_id
+        JOIN commande    c ON c.numero_commande  = a.commande_id
+        JOIN menu        m ON m.menu_id          = c.menu_id
+        WHERE a.statut = 'en attente'
+        ORDER BY a.avis_id ASC
+    ");
+
+    return $stmt->fetchAll();
+}
+
+/**
+ * Publie ou refuse un avis.
+ * Retourne true si un avis a bien été modifié, false sinon
+ * (identifiant inexistant, ou avis déjà modéré par un collègue).
+ */
+function avis_changer_statut(int $avis_id, string $statut): bool
+{
+    if (!in_array($statut, ['publié', 'refusé'], true)) {
+        throw new InvalidArgumentException("Statut d'avis invalide : {$statut}");
+    }
+
+    $stmt = getPDO()->prepare("
+        UPDATE avis
+        SET statut = ?
+        WHERE avis_id = ?
+          AND statut = 'en attente'
+    ");
+    $stmt->execute([$statut, $avis_id]);
+
+    return $stmt->rowCount() === 1;
+}

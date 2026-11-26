@@ -16,7 +16,8 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&family=Rubik:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;600;700&family=Rubik:wght@400;500&display=swap"
+        rel="stylesheet">
 
     <!-- Bootstrap 5 -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" rel="stylesheet">
@@ -36,8 +37,7 @@
             <a class="navbar-brand" href="/">🍽 Vite & Gourmand</a>
 
             <!-- Burger mobile -->
-            <button class="navbar-toggler" type="button"
-                data-bs-toggle="collapse" data-bs-target="#navMenu">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
@@ -49,6 +49,17 @@
                     <li class="nav-item">
                         <a class="nav-link" href="/contact">Contact</a>
                     </li>
+                    <?php if (est_connecte() && in_array(role_actuel(), [ROLE_EMPLOYE, ROLE_ADMIN], true)): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/employe/commandes">Commandes</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/employe/menus">Gestion menus</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="/employe/avis">Avis</a>
+                        </li>
+                    <?php endif; ?>
                 </ul>
 
                 <!-- Zone utilisateur à droite -->

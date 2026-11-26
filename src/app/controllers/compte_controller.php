@@ -225,13 +225,22 @@ function compte_avis_form(): void
     $numero = get_param('numero', '');
     $commande = commande_par_numero($numero);
 
-    // Vérifications : commande terminée + appartient au client
+    // La commande doit exister, être au client connecté et être terminée
     if (
         !$commande ||
         (int) $commande['utilisateur_id'] !== (int) $_SESSION['utilisateur_id'] ||
         $commande['statut'] !== STATUT_TERMINEE
     ) {
         redirect('/compte/commandes');
+    }
+
+    // Un seul avis par commande
+    if (avis_par_commande($numero) !== null) {
+        $_SESSION['flash'] = [
+            'type' => 'info',
+            'message' => 'Vous avez déjà déposé un avis pour cette commande.',
+        ];
+        redirect('/compte/commande?numero=' . urlencode($numero));
     }
 
     render('compte/deposer-avis', [
@@ -260,6 +269,15 @@ function compte_avis_traiter(): void
         redirect('/compte/commandes');
     }
 
+    // Un seul avis par commande (revérifié ici : le formulaire seul ne suffit pas)
+    if (avis_par_commande($numero) !== null) {
+        $_SESSION['flash'] = [
+            'type' => 'info',
+            'message' => 'Vous avez déjà déposé un avis pour cette commande.',
+        ];
+        redirect('/compte/commande?numero=' . urlencode($numero));
+    }
+
     if ($note < 1 || $note > 5) {
         $_SESSION['flash'] = [
             'type' => 'danger',
@@ -268,7 +286,7 @@ function compte_avis_traiter(): void
         redirect('/compte/avis?numero=' . urlencode($numero));
     }
 
-    if (strlen($description) < 10) {
+    if (mb_strlen($description) < 10) {
         $_SESSION['flash'] = [
             'type' => 'danger',
             'message' => 'Le commentaire doit faire au moins 10 caractères.',

@@ -8,37 +8,37 @@ declare(strict_types=1);
  */
 function menus_liste(array $filtres = []): array
 {
-    $pdo    = getPDO();
-    $where  = ['1=1'];
+    $pdo = getPDO();
+    $where = ['1=1'];
     $params = [];
 
     // Filtre prix maximum
     if (!empty($filtres['prix_max']) && is_numeric($filtres['prix_max'])) {
-        $where[]  = 'm.prix_par_personne <= :prix_max';
+        $where[] = 'm.prix_par_personne <= :prix_max';
         $params[':prix_max'] = (float) $filtres['prix_max'];
     }
 
     // Filtre fourchette de prix — prix minimum
     if (!empty($filtres['prix_min']) && is_numeric($filtres['prix_min'])) {
-        $where[]  = 'm.prix_par_personne >= :prix_min';
+        $where[] = 'm.prix_par_personne >= :prix_min';
         $params[':prix_min'] = (float) $filtres['prix_min'];
     }
 
     // Filtre par thème
     if (!empty($filtres['theme_id']) && is_numeric($filtres['theme_id'])) {
-        $where[]  = 'm.theme_id = :theme_id';
+        $where[] = 'm.theme_id = :theme_id';
         $params[':theme_id'] = (int) $filtres['theme_id'];
     }
 
     // Filtre par régime
     if (!empty($filtres['regime_id']) && is_numeric($filtres['regime_id'])) {
-        $where[]  = 'm.regime_id = :regime_id';
+        $where[] = 'm.regime_id = :regime_id';
         $params[':regime_id'] = (int) $filtres['regime_id'];
     }
 
     // Filtre par nombre de personnes minimum
     if (!empty($filtres['nb_personnes']) && is_numeric($filtres['nb_personnes'])) {
-        $where[]  = 'm.nombre_personne_minimum <= :nb_personnes';
+        $where[] = 'm.nombre_personne_minimum <= :nb_personnes';
         $params[':nb_personnes'] = (int) $filtres['nb_personnes'];
     }
 
@@ -69,7 +69,7 @@ function menus_liste(array $filtres = []): array
  */
 function menu_par_id(int $menu_id): ?array
 {
-    $pdo  = getPDO();
+    $pdo = getPDO();
 
     // Le menu principal
     $stmt = $pdo->prepare("
@@ -85,7 +85,8 @@ function menu_par_id(int $menu_id): ?array
     $stmt->execute([$menu_id]);
     $menu = $stmt->fetch();
 
-    if (!$menu) return null;
+    if (!$menu)
+        return null;
 
     // Les plats du menu avec leurs allergènes
     $stmt2 = $pdo->prepare("
@@ -121,4 +122,123 @@ function themes_tous(): array
 function regimes_tous(): array
 {
     return getPDO()->query('SELECT * FROM regime ORDER BY libelle')->fetchAll();
+}
+
+/**
+ * Crée un menu. Retourne son identifiant.
+ * $d : titre, description, prix_par_personne, nombre_personne_minimum,
+ *      quantite_restante, regime_id (ou null), theme_id (ou null)
+ */
+function menu_creer(array $d): int
+{
+    $pdo = getPDO();
+    $stmt = $pdo->prepare("
+        INSERT INTO menu
+            (titre, description, prix_par_personne,
+             nombre_personne_minimum, quantite_restante,
+             regime_id, theme_id)
+        VALUES
+            (:titre, :description, :prix,
+             :minimum, :dispo, :regime, :theme)
+    ");
+    $stmt->execute([
+        ':titre' => $d['titre'],
+        ':description' => $d['description'],
+        ':prix' => $d['prix_par_personne'],
+        ':minimum' => $d['nombre_personne_minimum'],
+        ':dispo' => $d['quantite_restante'],
+        ':regime' => $d['regime_id'],
+        ':theme' => $d['theme_id'],
+    ]);
+
+    return (int) $pdo->lastInsertId();
+}
+
+/**
+ * Modifie un menu existant.
+ */
+function menu_modifier(int $menu_id, array $d): void
+{
+    getPDO()->prepare("
+        UPDATE menu SET
+            titre                   = :titre,
+            description             = :description,
+            prix_par_personne       = :prix,
+            nombre_personne_minimum = :minimum,
+            quantite_restante       = :dispo,
+            regime_id               = :regime,
+            theme_id                = :theme
+        WHERE menu_id = :id
+    ")->execute([
+                ':titre' => $d['titre'],
+                ':description' => $d['description'],
+                ':prix' => $d['prix_par_personne'],
+                ':minimum' => $d['nombre_personne_minimum'],
+                ':dispo' => $d['quantite_restante'],
+                ':regime' => $d['regime_id'],
+                ':theme' => $d['theme_id'],
+                ':id' => $menu_id,
+            ]);
+}
+
+/**
+ * Supprime un menu et ses liaisons avec les plats.
+ * Retourne false si le menu est référencé par des commandes
+ * (la clé étrangère de la base le refuse) : dans ce cas, rien n'est supprimé.
+ */
+function menu_supprimer(int $menu_id): bool
+{
+    $pdo = getPDO();
+    $pdo->beginTransaction();
+
+    try {
+        $pdo->prepare('DELETE FROM compose WHERE menu_id = ?')
+            ->execute([$menu_id]);
+
+        $stmt = $pdo->prepare('DELETE FROM menu WHERE menu_id = ?');
+        $stmt->execute([$menu_id]);
+
+        $pdo->commit();
+        return $stmt->rowCount() === 1;
+
+    } catch (PDOException $e) {
+        $pdo->rollBack();
+
+        // 23000 = violation d'intégrité : des commandes pointent vers ce menu
+        if ($e->getCode() === '23000') {
+            return false;
+        }
+        throw $e;
+    }
+}
+
+/**
+ * Remplace la liste des plats d'un menu.
+ * Les identifiants inexistants sont ignorés (pas d'erreur).
+ */
+function menu_maj_plats(int $menu_id, array $plat_ids): void
+{
+    $pdo = getPDO();
+    $pdo->beginTransaction();
+
+    try {
+        $pdo->prepare('DELETE FROM compose WHERE menu_id = ?')
+            ->execute([$menu_id]);
+
+        $ids = array_unique(array_map('intval', $plat_ids));
+        $stmt = $pdo->prepare('
+            INSERT INTO compose (menu_id, plat_id)
+            SELECT ?, plat_id FROM plat WHERE plat_id = ?
+        ');
+
+        foreach ($ids as $plat_id) {
+            $stmt->execute([$menu_id, $plat_id]);
+        }
+
+        $pdo->commit();
+
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
 }

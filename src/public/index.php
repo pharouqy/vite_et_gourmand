@@ -51,6 +51,8 @@ require_once dirname(__DIR__) . '/app/models/token_reset_model.php';
 require_once dirname(__DIR__) . '/app/models/horaire_model.php';
 require_once dirname(__DIR__) . '/app/models/avis_model.php';
 require_once dirname(__DIR__) . '/app/models/menu_model.php';
+require_once dirname(__DIR__) . '/app/models/plat_model.php';
+require_once dirname(__DIR__) . '/app/models/allergene_model.php';
 require_once dirname(__DIR__) . '/app/models/commande_model.php';
 
 // ── Démarrage sécurisé de la session ────────────────────────────────
